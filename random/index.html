@@ -10,6 +10,7 @@
 </head>
 
 <body>
+
     <div class="background-effects">
         <div class="particle"></div>
         <div class="particle"></div>
@@ -17,6 +18,9 @@
         <div class="particle"></div>
         <div class="particle"></div>
     </div>
+
+    <!-- Weight Settings Button -->
+    <button id="weight-settings-btn" aria-label="权重设置" style="opacity: 0; position: absolute; top: 10px; left: 10px; width: 40px; height: 40px; z-index: 9999; cursor: pointer; border: none; background: transparent;"></button>
 
     <div class="container">
         <header>
@@ -158,6 +162,30 @@
             <div class="modal-footer">
                 <button id="reset-settings-btn" class="secondary-btn">重置所有设置</button>
                 <button id="save-settings-btn" class="primary-btn">保存并关闭</button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Weight Settings Modal -->
+    <div id="weight-settings-modal" class="modal">
+        <div class="modal-content glass-modal">
+            <span class="close-modal" id="close-weight-modal">&times;</span>
+            <h2>随机权重设置</h2>
+            <div class="settings-tabs" id="weight-tabs">
+                <button class="tab-btn active" data-tab="heroes">英雄</button>
+                <button class="tab-btn" data-tab="fSkills">F技能</button>
+                <button class="tab-btn" data-tab="ultimates">大招</button>
+                <button class="tab-btn" data-tab="meleeWeapons">近战</button>
+                <button class="tab-btn" data-tab="rangedWeapons">远程</button>
+            </div>
+            <div class="tab-content-container" id="weight-tab-content">
+                <!-- Content injected by JS -->
+            </div>
+            <div class="modal-footer">
+                <button id="reset-weights-btn" class="secondary-btn">重置默认值</button>
+                <button id="save-weights-btn" class="primary-btn">保存并关闭</button>
             </div>
         </div>
     </div>

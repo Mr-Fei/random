@@ -31,6 +31,70 @@ const SPINNER_CONFIG = {
     'spinner-ranged': { key: 'rangedWeapons', label: '远程武器', resultId: 'result-ranged', wrapperId: 'wrapper-ranged' }
 };
 
+// ==================== Weights System ====================
+let WEIGHTS = {};
+
+function initWeights() {
+    const stored = localStorage.getItem('kled_random_weights');
+    if (stored) {
+        try {
+            WEIGHTS = JSON.parse(stored);
+        } catch (e) {
+            console.error('Failed to load weights', e);
+        }
+    }
+    
+    // Ensure structure and default values
+    let updated = false;
+    const dataKeys = ['heroes', 'fSkills', 'ultimates', 'meleeWeapons', 'rangedWeapons'];
+    
+    dataKeys.forEach(key => {
+        if (!WEIGHTS[key]) {
+            WEIGHTS[key] = {};
+            updated = true;
+        }
+        
+        GAME_DATA[key].forEach(item => {
+            if (WEIGHTS[key][item] === undefined) {
+                WEIGHTS[key][item] = 100;
+                updated = true;
+            }
+        });
+    });
+    
+    if (updated) saveWeights();
+}
+
+function saveWeights() {
+    localStorage.setItem('kled_random_weights', JSON.stringify(WEIGHTS));
+}
+
+function getWeightedRandomItem(items, dataKey) {
+    // If no key or no weights for this key, return uniform random
+    if (!dataKey || !WEIGHTS[dataKey]) return items[Math.floor(Math.random() * items.length)];
+    
+    const itemWeights = items.map(item => {
+        // Default to 100 if undefined
+        const w = WEIGHTS[dataKey][item] !== undefined ? WEIGHTS[dataKey][item] : 100;
+        return { item, weight: w };
+    });
+    
+    const totalWeight = itemWeights.reduce((sum, current) => sum + current.weight, 0);
+    
+    if (totalWeight <= 0) return items[Math.floor(Math.random() * items.length)];
+    
+    let random = Math.random() * totalWeight;
+    
+    for (const iw of itemWeights) {
+        if (random < iw.weight) return iw.item;
+        random -= iw.weight;
+    }
+    
+    return items[items.length - 1];
+}
+
+initWeights();
+
 const SPIN_STAGES = [
     { duration: 1000, interval: 30 },
     { duration: 1500, interval: 60 },
@@ -86,6 +150,7 @@ function init() {
     updateUI();
     initSpinners();
     bindEvents();
+    bindWeightEvents();
 }
 
 function updateUI() {
@@ -384,7 +449,7 @@ function spin(spinnerIds, isMainSpin = false) {
         // We use crypto.getRandomValues for better randomness if available, 
         // but Math.random is sufficient for this game. 
         // To ensure isolation, each spin is a separate event.
-        const targetItem = activeItems[Math.floor(Math.random() * activeItems.length)];
+        const targetItem = getWeightedRandomItem(activeItems, config.key);
         
         results.push({ label: config.label, value: targetItem });
 
@@ -534,3 +599,114 @@ document.head.appendChild(style);
 
 // ==================== Start ====================
 init();
+
+// ==================== Weight UI Logic ====================
+function bindWeightEvents() {
+    const weightBtn = document.getElementById('weight-settings-btn');
+    const weightModal = document.getElementById('weight-settings-modal');
+    const closeWeightModal = document.getElementById('close-weight-modal');
+    const weightTabs = document.getElementById('weight-tabs');
+    const saveWeightsBtn = document.getElementById('save-weights-btn');
+    const resetWeightsBtn = document.getElementById('reset-weights-btn');
+
+    if (weightBtn) {
+        weightBtn.addEventListener('click', () => {
+            weightModal.classList.add('show');
+            renderWeightTab('heroes');
+        });
+    }
+
+    if (closeWeightModal) {
+        closeWeightModal.addEventListener('click', () => {
+            weightModal.classList.remove('show');
+        });
+    }
+
+    if (saveWeightsBtn) {
+        saveWeightsBtn.addEventListener('click', () => {
+            weightModal.classList.remove('show');
+        });
+    }
+
+    if (resetWeightsBtn) {
+        resetWeightsBtn.addEventListener('click', () => {
+             if(confirm('确定要重置所有权重为默认值(100)吗？')) {
+                resetAllWeights();
+            }
+        });
+    }
+
+    if (weightTabs) {
+        weightTabs.addEventListener('click', (e) => {
+            if (e.target.classList.contains('tab-btn')) {
+                weightTabs.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                const tabKey = e.target.dataset.tab;
+                renderWeightTab(tabKey);
+            }
+        });
+    }
+    
+    if (weightModal) {
+         weightModal.addEventListener('click', (e) => {
+            if (e.target === weightModal) weightModal.classList.remove('show');
+        });
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && weightModal && weightModal.classList.contains('show')) {
+            weightModal.classList.remove('show');
+        }
+    });
+}
+
+let currentWeightTabKey = 'heroes';
+
+function renderWeightTab(key) {
+    currentWeightTabKey = key;
+    const content = document.getElementById('weight-tab-content');
+    if (!content) return;
+    
+    const items = GAME_DATA[key];
+    content.innerHTML = `<div class="items-grid">
+        ${items.map(item => {
+            const weight = WEIGHTS[key][item] !== undefined ? WEIGHTS[key][item] : 100;
+            return `
+                <div class="weight-item">
+                    <div class="weight-header">
+                        <span class="weight-label">${item}</span>
+                        <span class="weight-value" id="val-${key}-${item}">${weight}</span>
+                    </div>
+                    <div class="weight-slider-container">
+                        <input type="range" min="0" max="200" step="0.1" value="${weight}" 
+                            class="weight-slider" 
+                            oninput="updateWeightValue('${key}', '${item}', this.value)">
+                    </div>
+                </div>
+            `;
+        }).join('')}
+    </div>`;
+}
+
+window.updateWeightValue = function(key, item, value) {
+    const floatVal = Math.round(parseFloat(value) * 10) / 10;
+    if (!WEIGHTS[key]) WEIGHTS[key] = {};
+    WEIGHTS[key][item] = floatVal;
+    
+    const display = document.getElementById(`val-${key}-${item}`);
+    if (display) display.textContent = floatVal;
+    
+    saveWeights();
+};
+
+function resetAllWeights() {
+    const keys = ['heroes', 'fSkills', 'ultimates', 'meleeWeapons', 'rangedWeapons'];
+    keys.forEach(key => {
+        if (!WEIGHTS[key]) WEIGHTS[key] = {};
+        GAME_DATA[key].forEach(item => {
+            WEIGHTS[key][item] = 100;
+        });
+    });
+    saveWeights();
+    renderWeightTab(currentWeightTabKey);
+}
