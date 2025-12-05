@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>克烈无间 - 随机挑战生成器</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="background-effects">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1 class="title">克烈无间</h1>
+            <p class="subtitle">随机挑战生成器</p>
+        </header>
+
+        <div class="spinners-container">
+            <div class="spinner-wrapper">
+                <div class="spinner-label">英雄</div>
+                <div class="spinner" id="spinner-hero">
+                    <div class="spinner-inner">
+                        <!-- Items will be injected by JS -->
+                    </div>
+                </div>
+                <div class="result-display" id="result-hero">?</div>
+            </div>
+
+            <div class="spinner-wrapper">
+                <div class="spinner-label">F技能</div>
+                <div class="spinner" id="spinner-fskill">
+                    <div class="spinner-inner">
+                    </div>
+                </div>
+                <div class="result-display" id="result-fskill">?</div>
+            </div>
+
+            <div class="spinner-wrapper">
+                <div class="spinner-label">大招</div>
+                <div class="spinner" id="spinner-ult">
+                    <div class="spinner-inner">
+                    </div>
+                </div>
+                <div class="result-display" id="result-ult">?</div>
+            </div>
+
+            <div class="spinner-wrapper">
+                <div class="spinner-label">近战武器</div>
+                <div class="spinner" id="spinner-melee">
+                    <div class="spinner-inner">
+                    </div>
+                </div>
+                <div class="result-display" id="result-melee">?</div>
+            </div>
+
+            <div class="spinner-wrapper">
+                <div class="spinner-label">远程武器</div>
+                <div class="spinner" id="spinner-ranged">
+                    <div class="spinner-inner">
+                    </div>
+                </div>
+                <div class="result-display" id="result-ranged">?</div>
+            </div>
+        </div>
+
+        <button class="spin-button" id="spin-btn">
+            <span class="btn-text">开始挑战</span>
+            <span class="btn-glow"></span>
+        </button>
+
+        <div class="final-result" id="final-result">
+            <h2>挑战配置</h2>
+            <div class="result-grid" id="result-grid">
+                <!-- Results will be shown here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
