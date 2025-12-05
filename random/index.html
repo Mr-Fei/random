@@ -20,13 +20,32 @@
 
     <div class="container">
         <header>
-            <h1 class="title">克烈无间</h1>
+            <div class="title-container">
+                <h1 class="title" id="main-title">克烈无间</h1>
+                <button class="icon-btn edit-title-btn" id="edit-title-btn" title="修改标题">✎</button>
+            </div>
+            <div class="title-edit-container" id="title-edit-container" style="display: none;">
+                <input type="text" id="title-input" maxlength="20" placeholder="输入新标题">
+                <button class="icon-btn save-btn" id="save-title-btn">✓</button>
+                <button class="icon-btn cancel-btn" id="cancel-title-btn">✕</button>
+                <button class="icon-btn reset-btn" id="reset-title-btn" title="重置默认">↺</button>
+            </div>
             <p class="subtitle">随机挑战生成器</p>
+            <button class="settings-toggle-btn" id="settings-btn">⚙ 设置</button>
         </header>
 
         <div class="spinners-container">
-            <div class="spinner-wrapper">
-                <div class="spinner-label">英雄</div>
+            <div class="spinner-wrapper" id="wrapper-hero">
+                <div class="spinner-header">
+                    <div class="spinner-label">英雄</div>
+                    <div class="spinner-controls">
+                        <label class="toggle-switch">
+                            <input type="checkbox" checked data-target="spinner-hero">
+                            <span class="slider round"></span>
+                        </label>
+                        <button class="mini-spin-btn" data-target="spinner-hero" title="单独随机">↻</button>
+                    </div>
+                </div>
                 <div class="spinner" id="spinner-hero">
                     <div class="spinner-inner">
                         <!-- Items will be injected by JS -->
@@ -35,8 +54,17 @@
                 <div class="result-display" id="result-hero">?</div>
             </div>
 
-            <div class="spinner-wrapper">
-                <div class="spinner-label">F技能</div>
+            <div class="spinner-wrapper" id="wrapper-fskill">
+                <div class="spinner-header">
+                    <div class="spinner-label">F技能</div>
+                    <div class="spinner-controls">
+                        <label class="toggle-switch">
+                            <input type="checkbox" checked data-target="spinner-fskill">
+                            <span class="slider round"></span>
+                        </label>
+                        <button class="mini-spin-btn" data-target="spinner-fskill" title="单独随机">↻</button>
+                    </div>
+                </div>
                 <div class="spinner" id="spinner-fskill">
                     <div class="spinner-inner">
                     </div>
@@ -44,8 +72,17 @@
                 <div class="result-display" id="result-fskill">?</div>
             </div>
 
-            <div class="spinner-wrapper">
-                <div class="spinner-label">大招</div>
+            <div class="spinner-wrapper" id="wrapper-ult">
+                <div class="spinner-header">
+                    <div class="spinner-label">大招</div>
+                    <div class="spinner-controls">
+                        <label class="toggle-switch">
+                            <input type="checkbox" checked data-target="spinner-ult">
+                            <span class="slider round"></span>
+                        </label>
+                        <button class="mini-spin-btn" data-target="spinner-ult" title="单独随机">↻</button>
+                    </div>
+                </div>
                 <div class="spinner" id="spinner-ult">
                     <div class="spinner-inner">
                     </div>
@@ -53,8 +90,17 @@
                 <div class="result-display" id="result-ult">?</div>
             </div>
 
-            <div class="spinner-wrapper">
-                <div class="spinner-label">近战武器</div>
+            <div class="spinner-wrapper" id="wrapper-melee">
+                <div class="spinner-header">
+                    <div class="spinner-label">近战武器</div>
+                    <div class="spinner-controls">
+                        <label class="toggle-switch">
+                            <input type="checkbox" checked data-target="spinner-melee">
+                            <span class="slider round"></span>
+                        </label>
+                        <button class="mini-spin-btn" data-target="spinner-melee" title="单独随机">↻</button>
+                    </div>
+                </div>
                 <div class="spinner" id="spinner-melee">
                     <div class="spinner-inner">
                     </div>
@@ -62,8 +108,17 @@
                 <div class="result-display" id="result-melee">?</div>
             </div>
 
-            <div class="spinner-wrapper">
-                <div class="spinner-label">远程武器</div>
+            <div class="spinner-wrapper" id="wrapper-ranged">
+                <div class="spinner-header">
+                    <div class="spinner-label">远程武器</div>
+                    <div class="spinner-controls">
+                        <label class="toggle-switch">
+                            <input type="checkbox" checked data-target="spinner-ranged">
+                            <span class="slider round"></span>
+                        </label>
+                        <button class="mini-spin-btn" data-target="spinner-ranged" title="单独随机">↻</button>
+                    </div>
+                </div>
                 <div class="spinner" id="spinner-ranged">
                     <div class="spinner-inner">
                     </div>
@@ -81,6 +136,28 @@
             <h2>挑战配置</h2>
             <div class="result-grid" id="result-grid">
                 <!-- Results will be shown here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>禁用选项设置</h2>
+            <div class="settings-tabs">
+                <button class="tab-btn active" data-tab="hero">英雄</button>
+                <button class="tab-btn" data-tab="fskill">F技能</button>
+                <button class="tab-btn" data-tab="ult">大招</button>
+                <button class="tab-btn" data-tab="melee">近战</button>
+                <button class="tab-btn" data-tab="ranged">远程</button>
+            </div>
+            <div class="tab-content-container">
+                <!-- Content injected by JS -->
+            </div>
+            <div class="modal-footer">
+                <button id="reset-settings-btn" class="secondary-btn">重置所有设置</button>
+                <button id="save-settings-btn" class="primary-btn">保存并关闭</button>
             </div>
         </div>
     </div>

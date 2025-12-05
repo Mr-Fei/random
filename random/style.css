@@ -99,6 +99,15 @@ body {
 header {
     text-align: center;
     margin-bottom: 50px;
+    position: relative;
+    width: 100%;
+}
+
+.title-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
 }
 
 .title {
@@ -112,6 +121,7 @@ header {
     filter: drop-shadow(0 0 30px rgba(212, 175, 55, 0.4));
     letter-spacing: 0.1em;
     animation: titleGlow 3s ease-in-out infinite;
+    margin: 0;
 }
 
 @keyframes titleGlow {
@@ -124,6 +134,59 @@ header {
     color: var(--text-muted);
     margin-top: 10px;
     letter-spacing: 0.3em;
+}
+
+/* Title Editing */
+.icon-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: color 0.3s;
+    padding: 5px;
+}
+
+.icon-btn:hover {
+    color: var(--primary-gold);
+}
+
+.title-edit-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+#title-input {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--primary-gold);
+    color: var(--primary-gold-light);
+    font-size: 1.5rem;
+    padding: 5px 10px;
+    border-radius: 5px;
+    text-align: center;
+    width: 300px;
+}
+
+.settings-toggle-btn {
+    position: absolute;
+    right: 0;
+    top: 0;
+    background: transparent;
+    border: 1px solid var(--primary-gold);
+    color: var(--primary-gold);
+    padding: 8px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 0.9rem;
+}
+
+.settings-toggle-btn:hover {
+    background: rgba(212, 175, 55, 0.1);
+    box-shadow: var(--glow-gold);
 }
 
 /* ==================== Spinners Container ==================== */
@@ -140,6 +203,30 @@ header {
     flex-direction: column;
     align-items: center;
     gap: 15px;
+    transition: opacity 0.3s;
+}
+
+.spinner-wrapper.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.spinner-wrapper.disabled .spinner-controls {
+    pointer-events: auto; /* Allow re-enabling */
+}
+
+.spinner-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    width: 100%;
+}
+
+.spinner-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .spinner-label {
@@ -149,6 +236,80 @@ header {
     text-transform: uppercase;
     letter-spacing: 0.15em;
     text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+}
+
+.toggle-switch input { 
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #333;
+    transition: .4s;
+    border-radius: 34px;
+    border: 1px solid #555;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: var(--primary-red);
+    border-color: var(--primary-red);
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px var(--primary-red);
+}
+
+input:checked + .slider:before {
+    transform: translateX(20px);
+}
+
+/* Mini Spin Button */
+.mini-spin-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--bg-card);
+    border: 1px solid var(--primary-gold);
+    color: var(--primary-gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.3s;
+}
+
+.mini-spin-btn:hover {
+    background: var(--primary-gold);
+    color: var(--bg-dark);
+    transform: rotate(180deg);
 }
 
 .spinner {
@@ -349,6 +510,156 @@ header {
     border: 1px solid var(--primary-red);
 }
 
+/* ==================== Modal ==================== */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 100;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.show {
+    display: flex;
+}
+
+.modal-content {
+    background: var(--bg-dark);
+    border: 2px solid var(--primary-gold);
+    border-radius: 15px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 80vh;
+    padding: 30px;
+    position: relative;
+    box-shadow: var(--glow-gold);
+    display: flex;
+    flex-direction: column;
+}
+
+.close-modal {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    color: var(--text-muted);
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.close-modal:hover {
+    color: var(--primary-red);
+}
+
+.modal h2 {
+    color: var(--primary-gold);
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.settings-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.tab-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #444;
+    color: var(--text-muted);
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.tab-btn:hover, .tab-btn.active {
+    background: var(--primary-red);
+    color: white;
+    border-color: var(--primary-red);
+    box-shadow: var(--glow-red);
+}
+
+.tab-content-container {
+    flex: 1;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.items-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 15px;
+}
+
+.item-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 5px;
+    transition: background 0.2s;
+}
+
+.item-checkbox-label:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.item-checkbox-label input {
+    accent-color: var(--primary-red);
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+}
+
+.primary-btn {
+    background: var(--primary-gold);
+    color: var(--bg-dark);
+    border: none;
+    padding: 10px 25px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+
+.primary-btn:hover {
+    background: var(--primary-gold-light);
+    box-shadow: var(--glow-gold);
+}
+
+.secondary-btn {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--text-muted);
+    padding: 10px 25px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.secondary-btn:hover {
+    border-color: var(--text-light);
+    color: var(--text-light);
+}
+
 /* ==================== Spinning Animation ==================== */
 @keyframes spinFast {
     0% { transform: translateY(0); }
@@ -377,6 +688,12 @@ header {
     .result-grid {
         grid-template-columns: repeat(3, 1fr);
     }
+    
+    .settings-toggle-btn {
+        position: static;
+        margin-top: 15px;
+        display: inline-block;
+    }
 }
 
 @media (max-width: 600px) {
@@ -396,5 +713,14 @@ header {
     .spin-button {
         padding: 15px 50px;
         font-size: 1.2rem;
+    }
+
+    .title-container {
+        flex-direction: column;
+    }
+
+    .modal-content {
+        padding: 15px;
+        width: 95%;
     }
 }

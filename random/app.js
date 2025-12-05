@@ -2,192 +2,523 @@
 const spinBtn = document.getElementById('spin-btn');
 const finalResult = document.getElementById('final-result');
 const resultGrid = document.getElementById('result-grid');
+const mainTitle = document.getElementById('main-title');
+const editTitleBtn = document.getElementById('edit-title-btn');
+const titleEditContainer = document.getElementById('title-edit-container');
+const titleInput = document.getElementById('title-input');
+const saveTitleBtn = document.getElementById('save-title-btn');
+const cancelTitleBtn = document.getElementById('cancel-title-btn');
+const resetTitleBtn = document.getElementById('reset-title-btn');
+const settingsBtn = document.getElementById('settings-btn');
+const settingsModal = document.getElementById('settings-modal');
+const closeModalBtn = document.querySelector('.close-modal');
+const resetSettingsBtn = document.getElementById('reset-settings-btn');
+const saveSettingsBtn = document.getElementById('save-settings-btn');
+const tabBtns = document.querySelectorAll('.tab-btn');
+const tabContentContainer = document.querySelector('.tab-content-container');
 
-// Spinner configurations
-const spinnerConfigs = [
-    { id: 'spinner-hero', resultId: 'result-hero', data: GAME_DATA.heroes, label: '英雄' },
-    { id: 'spinner-fskill', resultId: 'result-fskill', data: GAME_DATA.fSkills, label: 'F技能' },
-    { id: 'spinner-ult', resultId: 'result-ult', data: GAME_DATA.ultimates, label: '大招' },
-    { id: 'spinner-melee', resultId: 'result-melee', data: GAME_DATA.meleeWeapons, label: '近战武器' },
-    { id: 'spinner-ranged', resultId: 'result-ranged', data: GAME_DATA.rangedWeapons, label: '远程武器' }
-];
-
-// State
-let isSpinning = false;
+// ==================== Constants & Config ====================
 const ITEM_HEIGHT = 50;
 const VISIBLE_ITEMS = 4;
-const SPIN_DURATION = 4000; // Total spin time in ms
+const SPIN_DURATION = 4000; 
+const DEFAULT_TITLE = "克烈无间";
+
+const SPINNER_CONFIG = {
+    'spinner-hero': { key: 'heroes', label: '英雄', resultId: 'result-hero', wrapperId: 'wrapper-hero' },
+    'spinner-fskill': { key: 'fSkills', label: 'F技能', resultId: 'result-fskill', wrapperId: 'wrapper-fskill' },
+    'spinner-ult': { key: 'ultimates', label: '大招', resultId: 'result-ult', wrapperId: 'wrapper-ult' },
+    'spinner-melee': { key: 'meleeWeapons', label: '近战武器', resultId: 'result-melee', wrapperId: 'wrapper-melee' },
+    'spinner-ranged': { key: 'rangedWeapons', label: '远程武器', resultId: 'result-ranged', wrapperId: 'wrapper-ranged' }
+};
+
 const SPIN_STAGES = [
-    { duration: 1000, interval: 30 },  // Fast
-    { duration: 1500, interval: 60 },  // Medium
-    { duration: 1000, interval: 120 }, // Slow
-    { duration: 500, interval: 200 }   // Very slow
+    { duration: 1000, interval: 30 },
+    { duration: 1500, interval: 60 },
+    { duration: 1000, interval: 120 },
+    { duration: 500, interval: 200 }
 ];
 
-// ==================== Initialize Spinners ====================
-function initSpinners() {
-    spinnerConfigs.forEach(config => {
-        const spinner = document.getElementById(config.id);
-        const inner = spinner.querySelector('.spinner-inner');
+// ==================== State Management ====================
+const State = {
+    title: DEFAULT_TITLE,
+    disabledCategories: [], // Array of spinner IDs
+    disabledItems: {}, // Object: { 'heroes': ['Name1', 'Name2'], ... }
+    
+    load() {
+        const saved = localStorage.getItem('randomGeneratorState');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            this.title = parsed.title || DEFAULT_TITLE;
+            this.disabledCategories = parsed.disabledCategories || [];
+            this.disabledItems = parsed.disabledItems || {};
+        }
+        // Initialize disabledItems keys if missing
+        Object.values(SPINNER_CONFIG).forEach(config => {
+            if (!this.disabledItems[config.key]) {
+                this.disabledItems[config.key] = [];
+            }
+        });
+    },
 
-        // Create enough items for seamless scrolling (repeat data 5 times)
-        const repeatedData = [...config.data, ...config.data, ...config.data, ...config.data, ...config.data];
+    save() {
+        localStorage.setItem('randomGeneratorState', JSON.stringify({
+            title: this.title,
+            disabledCategories: this.disabledCategories,
+            disabledItems: this.disabledItems
+        }));
+    },
+
+    reset() {
+        this.title = DEFAULT_TITLE;
+        this.disabledCategories = [];
+        this.disabledItems = {};
+        Object.values(SPINNER_CONFIG).forEach(config => {
+            this.disabledItems[config.key] = [];
+        });
+        this.save();
+        this.load(); // Reload to ensure consistency
+    }
+};
+
+// ==================== Initialization ====================
+function init() {
+    State.load();
+    updateUI();
+    initSpinners();
+    bindEvents();
+}
+
+function updateUI() {
+    // Update Title
+    mainTitle.textContent = State.title;
+    document.title = `${State.title} - 随机挑战生成器`;
+    titleInput.value = State.title;
+
+    // Update Category Toggles
+    document.querySelectorAll('.toggle-switch input').forEach(input => {
+        const targetId = input.dataset.target;
+        input.checked = !State.disabledCategories.includes(targetId);
+        updateCategoryVisuals(targetId, input.checked);
+    });
+}
+
+function updateCategoryVisuals(spinnerId, isEnabled) {
+    const config = SPINNER_CONFIG[spinnerId];
+    const wrapper = document.getElementById(config.wrapperId);
+    const miniBtn = wrapper.querySelector('.mini-spin-btn');
+    
+    if (isEnabled) {
+        wrapper.classList.remove('disabled');
+        miniBtn.disabled = false;
+    } else {
+        wrapper.classList.add('disabled');
+        miniBtn.disabled = true;
+    }
+}
+
+function getActiveItems(dataKey) {
+    const allItems = GAME_DATA[dataKey];
+    const disabled = State.disabledItems[dataKey] || [];
+    return allItems.filter(item => !disabled.includes(item));
+}
+
+function initSpinners() {
+    Object.entries(SPINNER_CONFIG).forEach(([id, config]) => {
+        const spinner = document.getElementById(id);
+        const inner = spinner.querySelector('.spinner-inner');
+        const activeItems = getActiveItems(config.key);
+
+        // Clear existing content
+        inner.innerHTML = '';
+
+        if (activeItems.length === 0) {
+            inner.innerHTML = '<div class="spinner-item">无选项</div>';
+            return;
+        }
+
+        // Create enough items for seamless scrolling
+        // If items are few, repeat more times
+        const minItems = 150; // Increased for smoother long spins
+        let repeatedData = [...activeItems];
+        while (repeatedData.length < minItems) {
+            repeatedData = [...repeatedData, ...activeItems];
+        }
 
         inner.innerHTML = repeatedData.map(item =>
             `<div class="spinner-item">${item}</div>`
         ).join('');
 
-        // Add highlight indicator
-        const highlight = document.createElement('div');
-        highlight.className = 'spinner-highlight';
-        spinner.appendChild(highlight);
+        // Add highlight indicator if not exists
+        if (!spinner.querySelector('.spinner-highlight')) {
+            const highlight = document.createElement('div');
+            highlight.className = 'spinner-highlight';
+            spinner.appendChild(highlight);
+        }
 
         // Center the spinner initially
-        const offset = -(config.data.length * 2 * ITEM_HEIGHT) + (VISIBLE_ITEMS / 2 * ITEM_HEIGHT) - (ITEM_HEIGHT / 2);
-        inner.style.transform = `translateY(${offset}px)`;
+        // We start at a position that aligns with an item
+        // Center offset: (VISIBLE_ITEMS / 2 * ITEM_HEIGHT) - (ITEM_HEIGHT / 2) = (2 * 50) - 25 = 75px
+        // Initial transform needs to align an item to this center
+        // Let's just set it to a reasonable negative value
+        const startOffset = -(activeItems.length * ITEM_HEIGHT) + 75;
+        inner.style.transform = `translateY(${startOffset}px)`;
+    });
+}
+
+// ==================== Event Binding ====================
+function bindEvents() {
+    // Title Editing
+    editTitleBtn.addEventListener('click', () => {
+        titleEditContainer.style.display = 'flex';
+        editTitleBtn.style.display = 'none';
+        mainTitle.style.display = 'none';
+        titleInput.focus();
+    });
+
+    saveTitleBtn.addEventListener('click', () => {
+        const newTitle = titleInput.value.trim();
+        if (newTitle) {
+            State.title = newTitle;
+            State.save();
+            updateUI();
+        }
+        closeTitleEdit();
+    });
+
+    cancelTitleBtn.addEventListener('click', closeTitleEdit);
+
+    resetTitleBtn.addEventListener('click', () => {
+        if(confirm('确定要重置标题为默认值吗？')) {
+            State.title = DEFAULT_TITLE;
+            State.save();
+            updateUI();
+            closeTitleEdit();
+        }
+    });
+
+    function closeTitleEdit() {
+        titleEditContainer.style.display = 'none';
+        editTitleBtn.style.display = 'inline-block';
+        mainTitle.style.display = 'block';
+    }
+
+    // Category Toggles
+    document.querySelectorAll('.toggle-switch input').forEach(input => {
+        input.addEventListener('change', (e) => {
+            const targetId = e.target.dataset.target;
+            const isEnabled = e.target.checked;
+            
+            if (isEnabled) {
+                State.disabledCategories = State.disabledCategories.filter(id => id !== targetId);
+            } else {
+                if (!State.disabledCategories.includes(targetId)) {
+                    State.disabledCategories.push(targetId);
+                }
+            }
+            State.save();
+            updateCategoryVisuals(targetId, isEnabled);
+        });
+    });
+
+    // Mini Spin Buttons
+    document.querySelectorAll('.mini-spin-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.dataset.target;
+            spin([targetId]);
+        });
+    });
+
+    // Main Spin Button
+    spinBtn.addEventListener('click', () => {
+        const enabledSpinners = Object.keys(SPINNER_CONFIG).filter(id => !State.disabledCategories.includes(id));
+        if (enabledSpinners.length === 0) {
+            alert('请至少启用一个随机选项！');
+            return;
+        }
+        spin(enabledSpinners, true);
+    });
+
+    // Settings Modal
+    settingsBtn.addEventListener('click', () => {
+        renderSettingsTab('heroes'); // Default tab
+        settingsModal.classList.add('show');
+    });
+
+    closeModalBtn.addEventListener('click', () => {
+        settingsModal.classList.remove('show');
+    });
+
+    window.addEventListener('click', (e) => {
+        if (e.target === settingsModal) {
+            settingsModal.classList.remove('show');
+        }
+    });
+
+    // Map tab data-tab to config keys
+    const tabMap = {
+        'hero': 'heroes',
+        'fskill': 'fSkills',
+        'ult': 'ultimates',
+        'melee': 'meleeWeapons',
+        'ranged': 'rangedWeapons'
+    };
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            tabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const tabKey = tabMap[btn.dataset.tab];
+            renderSettingsTab(tabKey);
+        });
+    });
+
+    resetSettingsBtn.addEventListener('click', () => {
+        if(confirm('确定要重置所有设置吗？这将恢复所有选项和标题。')) {
+            State.reset();
+            updateUI();
+            initSpinners();
+            settingsModal.classList.remove('show');
+        }
+    });
+
+    saveSettingsBtn.addEventListener('click', () => {
+        // Collect all unchecked items in the current tab? 
+        // No, we should update state immediately on checkbox change or collect all on save.
+        // Let's do immediate state update on checkbox change for simplicity in this logic,
+        // but since we have a "Save" button, users expect it to only save then.
+        // However, switching tabs would lose unsaved changes if we don't use a temp state.
+        // Simplest: Update State directly on checkbox change, "Save" just closes modal and re-inits spinners.
+        // "Reset" is global reset.
+        
+        initSpinners(); // Re-init to reflect disabled items
+        settingsModal.classList.remove('show');
+    });
+}
+
+function renderSettingsTab(dataKey) {
+    const allItems = GAME_DATA[dataKey];
+    const disabled = State.disabledItems[dataKey] || [];
+
+    tabContentContainer.innerHTML = `
+        <div class="items-grid">
+            ${allItems.map(item => {
+                const isChecked = !disabled.includes(item);
+                return `
+                    <label class="item-checkbox-label">
+                        <input type="checkbox" value="${item}" data-key="${dataKey}" ${isChecked ? 'checked' : ''}>
+                        ${item}
+                    </label>
+                `;
+            }).join('')}
+        </div>
+    `;
+
+    // Bind checkbox events
+    tabContentContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', (e) => {
+            const key = e.target.dataset.key;
+            const item = e.target.value;
+            const checked = e.target.checked;
+
+            if (checked) {
+                // Remove from disabled
+                State.disabledItems[key] = State.disabledItems[key].filter(i => i !== item);
+            } else {
+                // Add to disabled
+                if (!State.disabledItems[key].includes(item)) {
+                    State.disabledItems[key].push(item);
+                }
+            }
+            State.save();
+        });
     });
 }
 
 // ==================== Spin Logic ====================
-function getRandomItem(arr) {
-    return arr[Math.floor(Math.random() * arr.length)];
-}
+let isSpinning = false;
 
-function spinAll() {
+function spin(spinnerIds, isMainSpin = false) {
     if (isSpinning) return;
-    isSpinning = true;
-    spinBtn.disabled = true;
-    spinBtn.querySelector('.btn-text').textContent = '抽取中...';
-    finalResult.classList.remove('show');
+    
+    // Check if any target has no items
+    const validSpinners = spinnerIds.filter(id => {
+        const config = SPINNER_CONFIG[id];
+        const activeItems = getActiveItems(config.key);
+        return activeItems.length > 0;
+    });
 
-    // Reset result displays
-    spinnerConfigs.forEach(config => {
+    if (validSpinners.length === 0) {
+        if (isMainSpin) alert('没有可用的选项！');
+        return;
+    }
+
+    isSpinning = true;
+    if (isMainSpin) {
+        spinBtn.disabled = true;
+        spinBtn.querySelector('.btn-text').textContent = '抽取中...';
+        finalResult.classList.remove('show');
+    } else {
+        // Disable specific mini buttons
+        validSpinners.forEach(id => {
+            const wrapper = document.getElementById(SPINNER_CONFIG[id].wrapperId);
+            wrapper.querySelector('.mini-spin-btn').disabled = true;
+        });
+    }
+
+    // Reset displays for involved spinners
+    validSpinners.forEach(id => {
+        const config = SPINNER_CONFIG[id];
         const resultDisplay = document.getElementById(config.resultId);
         resultDisplay.textContent = '?';
         resultDisplay.classList.remove('active');
     });
 
+    let completedCount = 0;
     const results = [];
-    let completedSpinners = 0;
 
-    spinnerConfigs.forEach((config, index) => {
-        // Stagger the stop times for each spinner
-        const staggerDelay = index * 400;
-        const targetItem = getRandomItem(config.data);
+    validSpinners.forEach((id, index) => {
+        const config = SPINNER_CONFIG[id];
+        const activeItems = getActiveItems(config.key);
+        
+        // Independent Random Algorithm
+        // We use crypto.getRandomValues for better randomness if available, 
+        // but Math.random is sufficient for this game. 
+        // To ensure isolation, each spin is a separate event.
+        const targetItem = activeItems[Math.floor(Math.random() * activeItems.length)];
+        
         results.push({ label: config.label, value: targetItem });
 
-        spinSingleWheel(config, targetItem, staggerDelay, () => {
-            completedSpinners++;
-            if (completedSpinners === spinnerConfigs.length) {
-                showFinalResults(results);
+        const staggerDelay = isMainSpin ? index * 200 : 0;
+
+        spinSingleWheel(id, targetItem, activeItems, staggerDelay, () => {
+            completedCount++;
+            if (completedCount === validSpinners.length) {
                 isSpinning = false;
-                spinBtn.disabled = false;
-                spinBtn.querySelector('.btn-text').textContent = '再来一次';
+                
+                if (isMainSpin) {
+                    spinBtn.disabled = false;
+                    spinBtn.querySelector('.btn-text').textContent = '再来一次';
+                    showFinalResults(results); // This might only show subset if some categories disabled
+                } else {
+                     validSpinners.forEach(vid => {
+                        const wrapper = document.getElementById(SPINNER_CONFIG[vid].wrapperId);
+                        wrapper.querySelector('.mini-spin-btn').disabled = false;
+                    });
+                    // Update final result if it's already visible
+                    if (finalResult.classList.contains('show')) {
+                        updateFinalResults();
+                    }
+                }
             }
         });
     });
 }
 
-function spinSingleWheel(config, targetItem, staggerDelay, onComplete) {
-    const spinner = document.getElementById(config.id);
+function spinSingleWheel(spinnerId, targetItem, activeItems, delay, onComplete) {
+    const spinner = document.getElementById(spinnerId);
     const inner = spinner.querySelector('.spinner-inner');
+    const config = SPINNER_CONFIG[spinnerId];
     const resultDisplay = document.getElementById(config.resultId);
 
-    const dataLength = config.data.length;
-    const targetIndex = config.data.indexOf(targetItem);
+    // We need to find the position of the target item
+    // Since we have repeated data, we want to land on a "middle" one to allow spinning
+    // We reconstructed the HTML in initSpinners with [repeated...]
+    // Let's find a random occurrence of targetItem in the middle of the list
+    
+    const itemNodes = Array.from(inner.children);
+    const indices = itemNodes.map((node, idx) => node.textContent === targetItem ? idx : -1).filter(i => i !== -1);
+    
+    // Pick an index that is far enough down to spin for a while
+    // Ideally somewhere in the middle-end
+    const targetIndex = indices[Math.floor(indices.length * 0.7)]; 
 
-    // Calculate final position
-    // We want to land on an item in the "middle" repeated section
-    const baseOffset = dataLength * 2; // Start from middle section
-    const finalItemIndex = baseOffset + targetIndex;
+    // Calculate target position
+    // Center offset is 75px (calculated in init)
+    const centerOffset = 75;
+    const finalPosition = -(targetIndex * ITEM_HEIGHT) + centerOffset;
 
-    // Center offset calculation
-    const centerOffset = (VISIBLE_ITEMS / 2 * ITEM_HEIGHT) - (ITEM_HEIGHT / 2);
-    const finalPosition = -(finalItemIndex * ITEM_HEIGHT) + centerOffset;
-
+    // Current position
     let currentPosition = parseFloat(inner.style.transform.replace(/translateY\((.*)px\)/, '$1')) || 0;
-    let accumulatedTime = 0;
-
-    // Animation using stages
-    let stageIndex = 0;
-    let lastUpdate = 0;
+    
+    // If we are already below the target (unlikely with infinite scroll logic, but possible), 
+    // we reset position to top (which is same content) to allow spinning down
+    // For simplicity, let's just ensure we start "above" the target
+    // But since we use stages, we simulate movement.
+    
+    // Actually, to make it look good, we should spin by distance, not just move to target.
+    // But CSS transition is easiest for smooth stop.
+    // Let's use the hybrid approach from original code: manually animate stages, then transition to final.
 
     setTimeout(() => {
-        // Add visual spinning effect
         spinner.classList.add('spinning');
-
         const startTime = performance.now();
 
         function animate(timestamp) {
             const elapsed = timestamp - startTime;
 
             if (elapsed >= SPIN_DURATION) {
-                // Finalize position
+                // Stop
                 spinner.classList.remove('spinning');
-                inner.style.transition = 'transform 0.5s cubic-bezier(0.25, 0.1, 0.25, 1)';
+                inner.style.transition = 'transform 1.5s cubic-bezier(0.1, 0.9, 0.2, 1)'; // Ease out
                 inner.style.transform = `translateY(${finalPosition}px)`;
 
-                // Show result after animation
                 setTimeout(() => {
                     inner.style.transition = '';
                     resultDisplay.textContent = targetItem;
                     resultDisplay.classList.add('active');
-
-                    // Add a nice bounce effect
+                    
+                    // Trigger bounce
                     resultDisplay.style.animation = 'none';
-                    resultDisplay.offsetHeight; // Trigger reflow
+                    resultDisplay.offsetHeight; 
                     resultDisplay.style.animation = 'bounceIn 0.5s ease';
 
                     onComplete();
-                }, 500);
+                }, 1500);
                 return;
             }
 
-            // Determine current stage based on elapsed time
-            let stageTime = 0;
-            for (let i = 0; i < SPIN_STAGES.length; i++) {
-                if (elapsed < stageTime + SPIN_STAGES[i].duration) {
-                    stageIndex = i;
-                    break;
-                }
-                stageTime += SPIN_STAGES[i].duration;
+            // Move content
+            // Calculate speed based on stage
+            let speed = 20; // px per frame
+            // ... simple constant speed for the blur effect, then CSS handles the stop
+            
+            currentPosition -= speed;
+            
+            // Infinite scroll reset logic
+            // If we go too far, reset to a higher position that matches visually
+            const totalHeight = itemNodes.length * ITEM_HEIGHT;
+            // If we are past half the list, jump back up
+            if (-currentPosition > totalHeight / 2) {
+                currentPosition += (totalHeight / 3); // Approximate jump back
             }
 
-            const currentStage = SPIN_STAGES[stageIndex];
-
-            // Update position based on interval
-            if (timestamp - lastUpdate >= currentStage.interval) {
-                lastUpdate = timestamp;
-                currentPosition -= ITEM_HEIGHT;
-
-                // Reset position for infinite scroll effect
-                const resetThreshold = -(dataLength * 4 * ITEM_HEIGHT);
-                if (currentPosition < resetThreshold) {
-                    currentPosition += dataLength * ITEM_HEIGHT;
-                }
-
-                inner.style.transform = `translateY(${currentPosition}px)`;
-            }
-
+            inner.style.transform = `translateY(${currentPosition}px)`;
             requestAnimationFrame(animate);
         }
-
         requestAnimationFrame(animate);
-
-    }, staggerDelay);
+    }, delay);
 }
 
-function showFinalResults(results) {
-    resultGrid.innerHTML = results.map(r => `
+function updateFinalResults() {
+    const enabledCategories = Object.keys(SPINNER_CONFIG).filter(id => !State.disabledCategories.includes(id));
+    
+    const finalData = enabledCategories.map(id => {
+        const config = SPINNER_CONFIG[id];
+        const val = document.getElementById(config.resultId).textContent;
+        return { label: config.label, value: val === '?' ? '未抽取' : val };
+    });
+
+    resultGrid.innerHTML = finalData.map(r => `
         <div class="result-item">
             <span class="result-item-label">${r.label}</span>
             <span class="result-item-value">${r.value}</span>
         </div>
     `).join('');
+}
 
-    setTimeout(() => {
-        finalResult.classList.add('show');
-    }, 300);
+function showFinalResults(results) {
+    updateFinalResults();
+    finalResult.classList.add('show');
 }
 
 // ==================== Add bounce animation ====================
@@ -201,8 +532,5 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// ==================== Event Listeners ====================
-spinBtn.addEventListener('click', spinAll);
-
-// ==================== Initialize ====================
-initSpinners();
+// ==================== Start ====================
+init();
