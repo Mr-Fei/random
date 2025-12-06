@@ -73,24 +73,127 @@ function getWeightedRandomItem(items, dataKey) {
     // If no key or no weights for this key, return uniform random
     if (!dataKey || !WEIGHTS[dataKey]) return items[Math.floor(Math.random() * items.length)];
     
-    const itemWeights = items.map(item => {
-        // Default to 100 if undefined
-        const w = WEIGHTS[dataKey][item] !== undefined ? WEIGHTS[dataKey][item] : 100;
-        return { item, weight: w };
-    });
-    
-    const totalWeight = itemWeights.reduce((sum, current) => sum + current.weight, 0);
+    // Physics-based weight calculation
+    const randomConfig = State.randomConfig || {
+        baseWeightMultiplier: 3,
+        quadraticCorrection: false,
+        seed: null
+    };
+
+    let totalWeight = 0;
+    const weights = new Array(items.length);
+
+    for (let i = 0; i < items.length; i++) {
+        let w = WEIGHTS[dataKey][items[i]] !== undefined ? WEIGHTS[dataKey][items[i]] : 100;
+        
+        // Apply quadratic correction if enabled
+        if (randomConfig.quadraticCorrection) {
+            w = (w * w) / 100;
+        }
+        
+        // Apply base multiplier
+        w = w * randomConfig.baseWeightMultiplier;
+        
+        weights[i] = w;
+        totalWeight += w;
+    }
     
     if (totalWeight <= 0) return items[Math.floor(Math.random() * items.length)];
     
-    let random = Math.random() * totalWeight;
+    // Use seed if available (simple implementation)
+    let randomVal;
+    if (randomConfig.seed !== null && randomConfig.seed !== undefined) {
+        // Simple seeded random
+        const x = Math.sin(randomConfig.seed++) * 10000;
+        randomVal = (x - Math.floor(x)) * totalWeight;
+    } else {
+        randomVal = Math.random() * totalWeight;
+    }
     
-    for (const iw of itemWeights) {
-        if (random < iw.weight) return iw.item;
-        random -= iw.weight;
+    for (let i = 0; i < items.length; i++) {
+        if (randomVal < weights[i]) return items[i];
+        randomVal -= weights[i];
     }
     
     return items[items.length - 1];
+}
+
+function createDebugPanel() {
+    const panel = document.createElement('div');
+    panel.id = 'debug-panel';
+    panel.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.8);
+        padding: 15px;
+        border: 1px solid #d4af37;
+        border-radius: 8px;
+        color: white;
+        z-index: 10000;
+        font-size: 12px;
+        display: none;
+    `;
+    
+    panel.innerHTML = `
+        <h3 style="margin-bottom: 10px; color: #d4af37;">🎲 随机算法参数</h3>
+        
+        <div style="margin-bottom: 8px;">
+            <label>基础权重倍率 (1-10)</label>
+            <input type="range" min="1" max="10" step="0.5" value="3" id="debug-weight-mult">
+            <span id="debug-weight-mult-val">3</span>
+        </div>
+        
+        <div style="margin-bottom: 8px;">
+            <label>
+                <input type="checkbox" id="debug-quad"> 二次曲线修正
+            </label>
+        </div>
+        
+        <button id="debug-save-preset" style="margin-top: 10px; background: #d4af37; border: none; padding: 5px 10px; cursor: pointer;">保存预设</button>
+    `;
+    
+    document.body.appendChild(panel);
+    
+    // Bind events
+    document.getElementById('debug-weight-mult').addEventListener('input', (e) => {
+        if (!State.randomConfig) State.randomConfig = {};
+        State.randomConfig.baseWeightMultiplier = parseFloat(e.target.value);
+        document.getElementById('debug-weight-mult-val').textContent = e.target.value;
+    });
+    
+    document.getElementById('debug-quad').addEventListener('change', (e) => {
+        if (!State.randomConfig) State.randomConfig = {};
+        State.randomConfig.quadraticCorrection = e.target.checked;
+    });
+    
+    document.getElementById('debug-save-preset').addEventListener('click', () => {
+        State.save();
+        alert('预设已保存！');
+    });
+    
+    // Toggle button for debug panel
+    const toggleBtn = document.createElement('button');
+    toggleBtn.textContent = '🔧';
+    toggleBtn.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #333;
+        border: 1px solid #d4af37;
+        color: #d4af37;
+        cursor: pointer;
+        z-index: 10001;
+    `;
+    toggleBtn.onclick = () => {
+        const isHidden = panel.style.display === 'none';
+        panel.style.display = isHidden ? 'block' : 'none';
+        toggleBtn.style.right = isHidden ? '240px' : '20px';
+    };
+    document.body.appendChild(toggleBtn);
 }
 
 initWeights();
@@ -115,6 +218,11 @@ const State = {
             this.title = parsed.title || DEFAULT_TITLE;
             this.disabledCategories = parsed.disabledCategories || [];
             this.disabledItems = parsed.disabledItems || {};
+            this.randomConfig = parsed.randomConfig || {
+                baseWeightMultiplier: 3,
+                quadraticCorrection: true,
+                seed: null
+            };
         }
         // Initialize disabledItems keys if missing
         Object.values(SPINNER_CONFIG).forEach(config => {
@@ -122,13 +230,23 @@ const State = {
                 this.disabledItems[config.key] = [];
             }
         });
+        
+        // Default random config if not loaded
+        if (!this.randomConfig) {
+            this.randomConfig = {
+                baseWeightMultiplier: 3,
+                quadraticCorrection: true,
+                seed: null
+            };
+        }
     },
 
     save() {
         localStorage.setItem('randomGeneratorState', JSON.stringify({
             title: this.title,
             disabledCategories: this.disabledCategories,
-            disabledItems: this.disabledItems
+            disabledItems: this.disabledItems,
+            randomConfig: this.randomConfig
         }));
     },
 
@@ -136,6 +254,11 @@ const State = {
         this.title = DEFAULT_TITLE;
         this.disabledCategories = [];
         this.disabledItems = {};
+        this.randomConfig = {
+            baseWeightMultiplier: 3,
+            quadraticCorrection: true,
+            seed: null
+        };
         Object.values(SPINNER_CONFIG).forEach(config => {
             this.disabledItems[config.key] = [];
         });
@@ -151,6 +274,7 @@ function init() {
     initSpinners();
     bindEvents();
     bindWeightEvents();
+    // createDebugPanel(); // Hidden as requested
 }
 
 function updateUI() {
@@ -461,10 +585,10 @@ function spin(spinnerIds, isMainSpin = false) {
                 isSpinning = false;
                 
                 if (isMainSpin) {
-                    spinBtn.disabled = false;
-                    spinBtn.querySelector('.btn-text').textContent = '再来一次';
-                    showFinalResults(results); // This might only show subset if some categories disabled
-                } else {
+                        spinBtn.disabled = false;
+                        spinBtn.querySelector('.btn-text').textContent = '再来一次';
+                        showFinalResults(results); // This might only show subset if some categories disabled
+                    } else {
                      validSpinners.forEach(vid => {
                         const wrapper = document.getElementById(SPINNER_CONFIG[vid].wrapperId);
                         wrapper.querySelector('.mini-spin-btn').disabled = false;
@@ -502,21 +626,15 @@ function spinSingleWheel(spinnerId, targetItem, activeItems, delay, onComplete) 
     const centerOffset = 75;
     const finalPosition = -(targetIndex * ITEM_HEIGHT) + centerOffset;
 
-    // Current position
-    let currentPosition = parseFloat(inner.style.transform.replace(/translateY\((.*)px\)/, '$1')) || 0;
-    
-    // If we are already below the target (unlikely with infinite scroll logic, but possible), 
-    // we reset position to top (which is same content) to allow spinning down
-    // For simplicity, let's just ensure we start "above" the target
-    // But since we use stages, we simulate movement.
-    
-    // Actually, to make it look good, we should spin by distance, not just move to target.
-    // But CSS transition is easiest for smooth stop.
-    // Let's use the hybrid approach from original code: manually animate stages, then transition to final.
-
     setTimeout(() => {
         spinner.classList.add('spinning');
         const startTime = performance.now();
+        // Initial position
+        let startPos = parseFloat(inner.style.transform.replace(/translateY\((.*)px\)/, '$1')) || 0;
+        
+        // Speed: px per second. 1200 px/s = 20 px/frame at 60fps
+        const speed = 1200; 
+        const totalHeight = itemNodes.length * ITEM_HEIGHT;
 
         function animate(timestamp) {
             const elapsed = timestamp - startTime;
@@ -542,22 +660,20 @@ function spinSingleWheel(spinnerId, targetItem, activeItems, delay, onComplete) 
                 return;
             }
 
-            // Move content
-            // Calculate speed based on stage
-            let speed = 20; // px per frame
-            // ... simple constant speed for the blur effect, then CSS handles the stop
-            
-            currentPosition -= speed;
-            
+            // Time-based position update
+            // distance = speed * time
+            const distance = speed * (elapsed / 1000);
+            let currentPos = startPos - distance;
+
             // Infinite scroll reset logic
             // If we go too far, reset to a higher position that matches visually
-            const totalHeight = itemNodes.length * ITEM_HEIGHT;
-            // If we are past half the list, jump back up
-            if (-currentPosition > totalHeight / 2) {
-                currentPosition += (totalHeight / 3); // Approximate jump back
+            if (-currentPos > totalHeight / 2) {
+                const jump = totalHeight / 3;
+                startPos += jump;
+                currentPos += jump;
             }
 
-            inner.style.transform = `translateY(${currentPosition}px)`;
+            inner.style.transform = `translateY(${currentPos}px)`;
             requestAnimationFrame(animate);
         }
         requestAnimationFrame(animate);
@@ -586,17 +702,6 @@ function showFinalResults(results) {
     finalResult.classList.add('show');
 }
 
-// ==================== Add bounce animation ====================
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes bounceIn {
-        0% { transform: scale(0.8); opacity: 0.5; }
-        50% { transform: scale(1.1); }
-        100% { transform: scale(1); opacity: 1; }
-    }
-`;
-document.head.appendChild(style);
-
 // ==================== Start ====================
 init();
 
@@ -608,6 +713,27 @@ function bindWeightEvents() {
     const weightTabs = document.getElementById('weight-tabs');
     const saveWeightsBtn = document.getElementById('save-weights-btn');
     const resetWeightsBtn = document.getElementById('reset-weights-btn');
+    
+    // Base Weight Multiplier Logic
+    const baseWeightMultInput = document.getElementById('base-weight-mult');
+    const baseWeightMultVal = document.getElementById('base-weight-mult-val');
+
+    if (baseWeightMultInput) {
+        // Initialize value
+        if (State.randomConfig) {
+             baseWeightMultInput.value = State.randomConfig.baseWeightMultiplier || 3;
+             if (baseWeightMultVal) baseWeightMultVal.textContent = baseWeightMultInput.value;
+        }
+
+        baseWeightMultInput.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            if (baseWeightMultVal) baseWeightMultVal.textContent = val;
+            
+            if (!State.randomConfig) State.randomConfig = {};
+            State.randomConfig.baseWeightMultiplier = val;
+            State.save();
+        });
+    }
 
     if (weightBtn) {
         weightBtn.addEventListener('click', () => {

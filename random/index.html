@@ -12,11 +12,14 @@
 <body>
 
     <div class="background-effects">
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
+        <div class="bg-gradient"></div>
+        <div class="bg-grid"></div>
+        <div class="bg-scanline"></div>
+        <div class="bg-particles">
+            <span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span>
+        </div>
     </div>
 
     <!-- Weight Settings Button -->
@@ -173,6 +176,16 @@
         <div class="modal-content glass-modal">
             <span class="close-modal" id="close-weight-modal">&times;</span>
             <h2>随机权重设置</h2>
+            
+            <div class="global-weight-settings" style="margin-bottom: 15px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid rgba(212, 175, 55, 0.2);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <label for="base-weight-mult" style="color: #d4af37; font-weight: bold;">基础权重倍率</label>
+                    <span id="base-weight-mult-val" style="color: #fff; font-family: monospace;">3</span>
+                </div>
+                <input type="range" min="1" max="10" step="0.5" value="3" id="base-weight-mult" style="width: 100%; cursor: pointer;">
+                <p style="font-size: 12px; color: #aaa; margin-top: 8px; margin-bottom: 0;">调整倍率可放大或缩小不同权重之间的概率差异。</p>
+            </div>
+
             <div class="settings-tabs" id="weight-tabs">
                 <button class="tab-btn active" data-tab="heroes">英雄</button>
                 <button class="tab-btn" data-tab="fSkills">F技能</button>
